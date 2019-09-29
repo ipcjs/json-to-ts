@@ -7,11 +7,13 @@ import { shim } from 'es7-shim/es7-shim'
 import { getInterfaceDescriptions, getInterfaceStringFromDescription } from './get-interfaces'
 import { getNames } from './get-names'
 import { isArray, isObject } from './util'
+import { getTypedefStringFromDescription } from './get-typedef'
 shim()
 
 export default function JsonToTS(json: any, userOptions?: Options): string[] {
   const defaultOptions: Options = {
-    rootName: 'RootObject'
+    rootName: 'RootObject',
+    outputType: "ts"
   }
   const options = {
     ...defaultOptions,
@@ -41,7 +43,7 @@ export default function JsonToTS(json: any, userOptions?: Options): string[] {
   const names = getNames(typeStructure, options.rootName)
 
   return getInterfaceDescriptions(typeStructure, names)
-    .map(getInterfaceStringFromDescription)
+    .map(options.outputType === 'jsdoc' ? getTypedefStringFromDescription : getInterfaceStringFromDescription)
 }
 
 (<any>JsonToTS).default = JsonToTS

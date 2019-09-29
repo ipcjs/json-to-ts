@@ -31,6 +31,7 @@ export interface InterfaceDescription {
 
 export interface Options {
   rootName: string
+  outputType: 'ts' | 'jsdoc'
 }
 
 export interface KeyMetaData {
