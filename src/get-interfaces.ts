@@ -1,4 +1,4 @@
-import { InterfaceDescription, NameEntry, TypeStructure, KeyMetaData } from './model'
+import { InterfaceDescription, NameEntry, TypeStructure, KeyMetaData, OutputType } from './model'
 import { isHash, findTypeById, isNonArrayUnion } from './util'
 
 function isKeyNameValid(keyName: string) {
@@ -40,22 +40,25 @@ function removeNullFromUnion(unionTypeName: string) {
 
 function replaceTypeObjIdsWithNames (
   typeObj: {[index: string]: string},
-  names: NameEntry[]
+  names: NameEntry[],
+  outputType: OutputType
 ): object {
+  type TypeInfo = [string, string, boolean]
+  const appendOptionalFlag: (info: TypeInfo, prevIsOptional: boolean) => TypeInfo = outputType === 'jsdoc'
+    ? (info, prevIsOptional) => !prevIsOptional && info[2] ? [info[0], `${info[1]}=`, info[2]] : info // if already optional dont add flag
+    : (info, prevIsOptional) => !prevIsOptional && info[2] ? [`${info[0]}?`, info[1], info[2]] : info
   return Object.entries(typeObj)
     // quote key if is invalid and question mark if optional from array merging
-    .map(([key, type]): [string, string, boolean] => {
+    .map(([key, type]): TypeInfo => {
       const {isOptional, keyValue} = parseKeyMetaData(key)
       const isValid = isKeyNameValid(keyValue)
 
       const validName = isValid ? keyValue : `'${keyValue}'`
 
-      return isOptional  ?
-          [`${validName}?`, type, isOptional] :
-          [validName, type, isOptional]
+      return appendOptionalFlag([validName, type, isOptional], false)
     })
     // replace hashes with names referencing the hashes
-    .map(([key, type, isOptional]): [string, string, boolean] => {
+    .map(([key, type, isOptional]): TypeInfo => {
       if (!isHash(type)) {
         return [key, type, isOptional]
       }
@@ -64,24 +67,22 @@ function replaceTypeObjIdsWithNames (
       return [key, newType, isOptional]
     })
     // if union has null, remove null and make type optional
-    .map(([key, type, isOptional]): [string, string, boolean] => {
+    .map(([key, type, isOptional]): TypeInfo => {
       if (!(isNonArrayUnion(type) && type.includes('null'))) {
         return [key, type, isOptional]
       }
 
       const newType = removeNullFromUnion(type)
-      const newKey  = isOptional ? key : `${key}?` // if already optional dont add question mark
-      return [newKey, newType, isOptional]
+      return appendOptionalFlag([key, newType, true], isOptional)
     })
     // make null optional and set type as any
-    .map(([key, type, isOptional]): [string, string, boolean] => {
+    .map(([key, type, isOptional]): TypeInfo => {
       if (type !== 'null') {
         return [key, type, isOptional]
       }
 
       const newType = 'any'
-      const newKey  = isOptional ? key : `${key}?`// if already optional dont add question mark
-      return [newKey, newType, isOptional]
+      return appendOptionalFlag([key, newType, true], isOptional)
     })
     .reduce(
       (agg, [key, value]) => {
@@ -110,7 +111,8 @@ export function getInterfaceStringFromDescription({name, typeMap}: InterfaceDesc
 
 export function getInterfaceDescriptions(
   typeStructure: TypeStructure,
-  names: NameEntry[]
+  names: NameEntry[],
+  outputType: OutputType
 ): InterfaceDescription[] {
 
   return names
@@ -118,7 +120,7 @@ export function getInterfaceDescriptions(
       const typeDescription = findTypeById(id, typeStructure.types)
 
       if (typeDescription.typeObj) {
-        const typeMap = replaceTypeObjIdsWithNames(typeDescription.typeObj, names)
+        const typeMap = replaceTypeObjIdsWithNames(typeDescription.typeObj, names, outputType)
         return {name, typeMap}
       } else {
         return null

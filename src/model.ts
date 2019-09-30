@@ -29,9 +29,11 @@ export interface InterfaceDescription {
   typeMap: object
 }
 
+export type OutputType = 'ts' | 'jsdoc'
+
 export interface Options {
   rootName: string
-  outputType: 'ts' | 'jsdoc'
+  outputType: OutputType
 }
 
 export interface KeyMetaData {

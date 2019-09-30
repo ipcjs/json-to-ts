@@ -42,7 +42,7 @@ export default function JsonToTS(json: any, userOptions?: Options): string[] {
 
   const names = getNames(typeStructure, options.rootName)
 
-  return getInterfaceDescriptions(typeStructure, names)
+  return getInterfaceDescriptions(typeStructure, names, options.outputType)
     .map(options.outputType === 'jsdoc' ? getTypedefStringFromDescription : getInterfaceStringFromDescription)
 }
 
